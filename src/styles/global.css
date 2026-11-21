@@ -148,8 +148,8 @@ h1, h2, h3 { font-family: var(--letra-titulos); line-height: 1.15; }
   align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: var(--lima);
   font-family: var(--letra-titulos); font-size: 13px; font-weight: 500; color: var(--tinta);
 }
-.etiqueta.lugar, .etiqueta.edificio, .etiqueta.instituicao { background: var(--azul-claro); }
-.etiqueta.biografia { background: var(--verde); }
+.etiqueta.tipo-lugar, .etiqueta.tipo-edificio, .etiqueta.tipo-instituicao { background: var(--azul-claro); }
+.etiqueta.tipo-biografia { background: var(--verde); }
 .nota-pequena { font-family: var(--letra-titulos); font-size: 13px; color: var(--cinza); margin: 16px 0 0; }
 
 /* Números */

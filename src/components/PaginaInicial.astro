@@ -83,7 +83,7 @@ const hoje = formatarData(new Date().toISOString(), lingua);
           return (
             <article class="cartao">
               <img src={urlImagem(img.id, LARGURAS.cartao)} alt={img.legenda || ''} loading="lazy" decoding="async" />
-              <span class={`etiqueta ${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
+              <span class={`etiqueta tipo-${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
               <h3><a href={ligacao(e)}>{titulo(e)}</a>{!temTraducao(e, lingua) && <span class="quem"> ({t.emPortugues})</span>}</h3>
               <p class="quem">{e.autores.map((a) => a.nome).join(', ')}</p>
               <p>{c.resumo ? excerto(c.resumo, 120) : excerto(c.corpo, 120)}</p>

@@ -52,7 +52,7 @@ const linguaWikipedia = (l?: string) => t.linguas[l ?? 'pt'] ?? l ?? '';
       <a href={`${p}/`}>{t.inicio}</a>
       {temaPrincipal && <><span aria-hidden="true">/</span><a href={`${p}/temas/${temaPrincipal.slug}/`}>{nomeTema(temaPrincipal.nome, lingua)}</a></>}
     </nav>
-    <span class={`etiqueta ${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
+    <span class={`etiqueta tipo-${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
     <h1>{titulo}</h1>
     <div class="assinatura">
       <div class="quem">
@@ -107,7 +107,7 @@ const linguaWikipedia = (l?: string) => t.linguas[l ?? 'pt'] ?? l ?? '';
               const tt = alvo ? conteudo(alvo, l).titulo : r.titulo;
               return (
                 <a href={alvo ? urlEntrada(alvo, l) : `/article/${r.slug}/`}>
-                  <span class={`etiqueta ${r.tipo}`}>{t.tipos[r.tipo] ?? r.tipo}</span>
+                  <span class={`etiqueta tipo-${r.tipo}`}>{t.tipos[r.tipo] ?? r.tipo}</span>
                   <span class="titulo">{tituloApresentacao(tt, r.tipo, l !== 'pt')}</span>
                 </a>
               );

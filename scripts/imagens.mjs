@@ -44,7 +44,8 @@ for (const id of abertura) pedir(id, ABERTURA);
 await mkdir(PASTA, { recursive: true });
 let novas = 0, falhas = 0;
 const lista = [...pedidos.values()];
-const existe = async (f) => { try { await stat(f); return true; } catch { return false; } };
+// Um ficheiro vazio conta como em falta (o Directus às vezes responde sem conteúdo).
+const existe = async (f) => { try { return (await stat(f)).size > 0; } catch { return false; } };
 for (let i = 0; i < lista.length; i += 6) {
   await Promise.all(lista.slice(i, i + 6).map(async ([id, largura]) => {
     const destino = `${PASTA}/${id}-${largura}.webp`;
@@ -52,7 +53,9 @@ for (let i = 0; i < lista.length; i += 6) {
     const r = await fetch(`${URL_D}/assets/${id}?width=${largura}&quality=78&format=webp&withoutEnlargement=true`,
       { headers: { Authorization: `Bearer ${TOKEN}` } });
     if (!r.ok) { falhas++; console.warn(`Falhou ${id} (${r.status})`); return; }
-    await writeFile(destino, Buffer.from(await r.arrayBuffer()));
+    const dados = Buffer.from(await r.arrayBuffer());
+    if (!dados.length) { falhas++; console.warn(`Falhou ${id} (resposta vazia)`); return; }
+    await writeFile(destino, dados);
     novas++;
   }));
 }
