@@ -1,0 +1,10 @@
+---
+import ListaEntradas from '../components/ListaEntradas.astro';
+import { carregarAcervo } from '../lib/dados';
+
+const acervo = await carregarAcervo();
+const letra = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').charAt(0).toUpperCase();
+const letras = [...new Set(acervo.entradas.map((e) => letra(e.titulo)))].sort();
+const grupos = letras.map((l) => ({ id: l, titulo: l, entradas: acervo.entradas.filter((e) => letra(e.titulo) === l) }));
+---
+<ListaEntradas titulo="Todas as entradas, de A a Z" grupos={grupos} caminho="/a-z/" />

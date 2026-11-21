@@ -1,0 +1,12 @@
+---
+// Entradas em português: mantêm o endereço antigo /article/<slug> (decisão de 21/11/2026).
+import PaginaEntrada from '../../components/PaginaEntrada.astro';
+import { carregarAcervo } from '../../lib/dados';
+
+export async function getStaticPaths() {
+  const acervo = await carregarAcervo();
+  return acervo.entradas.map((entrada) => ({ params: { slug: entrada.slug }, props: { entrada } }));
+}
+const { entrada } = Astro.props;
+---
+<PaginaEntrada entrada={entrada} lingua="pt" />

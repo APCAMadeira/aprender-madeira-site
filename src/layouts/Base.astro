@@ -1,0 +1,59 @@
+---
+import '@fontsource/ubuntu/400.css';
+import '@fontsource/ubuntu/500.css';
+import '@fontsource/ubuntu/700.css';
+import '@fontsource/atkinson-hyperlegible/400.css';
+import '@fontsource/atkinson-hyperlegible/700.css';
+import '@fontsource/atkinson-hyperlegible/400-italic.css';
+import '../styles/global.css';
+import Cabecalho from '../components/Cabecalho.astro';
+import Rodape from '../components/Rodape.astro';
+import type { Lingua } from '../lib/dados';
+import { CODIGO_HTML, textos } from '../lib/textos';
+
+interface Props {
+  lingua: Lingua;
+  titulo: string;
+  descricao?: string;
+  alternativas: Partial<Record<Lingua, string>>;
+  imagem?: string;
+  pesquisaNoTopo?: boolean;
+}
+const { lingua, titulo, descricao = '', alternativas, imagem, pesquisaNoTopo = true } = Astro.props;
+const t = textos(lingua);
+const site = Astro.site ?? new URL('https://teste.aprenderamadeira.net');
+const canonico = new URL(Astro.url.pathname, site).href;
+const tituloCompleto = titulo === 'Aprender Madeira' ? titulo : `${titulo} — Aprender Madeira`;
+const naoIndexar = process.env.NAO_INDEXAR === '1';
+---
+<!doctype html>
+<html lang={CODIGO_HTML[lingua]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{tituloCompleto}</title>
+    {descricao && <meta name="description" content={descricao} />}
+    <link rel="canonical" href={canonico} />
+    {Object.entries(alternativas).map(([l, href]) => (
+      <link rel="alternate" hreflang={CODIGO_HTML[l as Lingua]} href={new URL(href as string, site).href} />
+    ))}
+    {alternativas.pt && <link rel="alternate" hreflang="x-default" href={new URL(alternativas.pt, site).href} />}
+    <meta property="og:title" content={tituloCompleto} />
+    {descricao && <meta property="og:description" content={descricao} />}
+    <meta property="og:url" content={canonico} />
+    <meta property="og:site_name" content="Aprender Madeira" />
+    <meta property="og:locale" content={CODIGO_HTML[lingua].replace('-', '_')} />
+    {imagem && <meta property="og:image" content={new URL(imagem, site).href} />}
+    {naoIndexar && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <slot name="cabeca" />
+  </head>
+  <body>
+    <a class="saltar" href="#conteudo">{t.saltar}</a>
+    <Cabecalho lingua={lingua} alternativas={alternativas} pesquisa={pesquisaNoTopo} />
+    <main id="conteudo" tabindex="-1">
+      <slot />
+    </main>
+    <Rodape lingua={lingua} />
+  </body>
+</html>

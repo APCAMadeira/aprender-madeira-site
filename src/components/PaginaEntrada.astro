@@ -1,0 +1,195 @@
+---
+import Base from '../layouts/Base.astro';
+import type { Entrada, Lingua } from '../lib/dados';
+import { LARGURAS, carregarAcervo, imagensDoTexto, urlImagem } from '../lib/dados';
+import {
+  ajustarLigacoes, carregarCitacoes, conteudo, excerto, minutosLeitura, nomeCitacao,
+  separarReferencias, temTraducao, urlEntrada,
+} from '../lib/entradas';
+import { LINGUAS, PREFIXO, formatarData, nomeTema, textos } from '../lib/textos';
+import { tituloApresentacao } from '../lib/titulos';
+
+interface Props { entrada: Entrada; lingua: Lingua }
+const { entrada: e, lingua } = Astro.props;
+const t = textos(lingua);
+const p = PREFIXO[lingua];
+const acervo = await carregarAcervo();
+const citacoes = (await carregarCitacoes()).porEntrada[e.slug] ?? [];
+
+const c = conteudo(e, lingua);
+const titulo = tituloApresentacao(c.titulo, e.tipo, Boolean(c.traducao));
+const comTraducao = new Set(acervo.entradas.filter((x) => temTraducao(x, lingua)).map((x) => x.slug));
+const corpo = imagensDoTexto(ajustarLigacoes(c.corpo, lingua, comTraducao));
+const automatica = c.traducao && /autom/i.test(`${c.traducao.origem} ${c.traducao.estado}`);
+
+const alternativas = Object.fromEntries(
+  LINGUAS.filter((l) => temTraducao(e, l)).map((l) => [l, urlEntrada(e, l)]),
+) as Partial<Record<Lingua, string>>;
+const outrasLinguas = LINGUAS.filter((l) => l !== lingua && alternativas[l]);
+
+const imagem = e.imagens.find((i) => (i.largura ?? 0) >= (i.altura ?? 1) * 1.15) ?? e.imagens[0];
+const data = formatarData(e.dataAtualizacao || e.dataPublicacao, lingua);
+const temaPrincipal = acervo.temas.find((x) => x.slug === e.categorias[0]?.tema);
+const subtemas = e.categorias;
+const referencias = separarReferencias(e.fontes);
+const VISIVEIS = 5;
+
+const site = (Astro.site ?? new URL('https://aprenderamadeira.net')).href.replace(/\/$/, '');
+const enderecoPermanente = `aprenderamadeira.net/article/${e.slug}`;
+const autoresCitacao = e.autores.map(nomeCitacao).join(' e ');
+const citacao = `${autoresCitacao}, “${c.titulo}”, Aprender Madeira, APCA${data ? `, atual. ${data}` : ''}. Disponível em: https://${enderecoPermanente}`;
+const iniciais = (nome: string) => {
+  const w = nome.split(/\s+/).filter(Boolean);
+  return ((w[0]?.[0] ?? '') + (w.length > 1 ? w[w.length - 1][0] : '')).toLocaleUpperCase('pt-PT');
+};
+const nomeLingua: Record<string, string> = { pt: 'Português', en: 'English', es: 'Español' };
+const linguaWikipedia = (l?: string) => t.linguas[l ?? 'pt'] ?? l ?? '';
+---
+<Base lingua={lingua} titulo={titulo} descricao={excerto(c.resumo || c.corpo, 155)} alternativas={alternativas}
+  imagem={imagem ? urlImagem(imagem.id, LARGURAS.grande) : undefined}>
+  <div class="contentor entrada-topo">
+    <nav class="migalhas" aria-label={t.localizacao}>
+      <a href={`${p}/`}>{t.inicio}</a>
+      {temaPrincipal && <><span aria-hidden="true">/</span><a href={`${p}/temas/${temaPrincipal.slug}/`}>{nomeTema(temaPrincipal.nome, lingua)}</a></>}
+    </nav>
+    <span class={`etiqueta ${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
+    <h1>{titulo}</h1>
+    <div class="assinatura">
+      <div class="quem">
+        {e.autores[0] && <span class="inicial" aria-hidden="true">{iniciais(e.autores[0].nome)}</span>}
+        <span>
+          {e.autores.map((a, i) => <>{i > 0 && ', '}<a href={`/autores/${a.slug}/`}>{a.nome}</a></>)}
+          <span class="meta">{[data && t.atualizado(data), t.leitura(minutosLeitura(c.corpo))].filter(Boolean).join(' · ')}</span>
+        </span>
+      </div>
+      <div class="acoes">
+        <a class="botao-suave" href="#citar">{t.comoCitar}</a>
+        <button type="button" class="botao-suave" data-acao="imprimir">{t.imprimir}</button>
+        <button type="button" class="botao-suave" data-acao="partilhar" data-copiado={t.ligacaoCopiada}>{t.partilhar}</button>
+      </div>
+    </div>
+  </div>
+
+  {imagem && (
+    <figure class="contentor figura-principal">
+      <img src={urlImagem(imagem.id, LARGURAS.grande)} alt={imagem.legenda || ''} width={imagem.largura} height={imagem.altura} fetchpriority="high" />
+      {imagem.legenda && <figcaption>{imagem.legenda}</figcaption>}
+    </figure>
+  )}
+
+  <div class="contentor entrada-corpo">
+    <nav class="indice-entrada" aria-label={t.nestaEntrada}>
+      <span class="rotulo">{t.nestaEntrada}</span>
+      <a href="#texto">{t.texto}</a>
+      {e.relacionadas.length > 0 && <a href="#ver-tambem">{t.verTambem}</a>}
+      {citacoes.length > 0 && <a href="#citado-em">{t.citadoEm}</a>}
+      {referencias.length > 0 && <a href="#bibliografia">{t.bibliografia} ({referencias.length})</a>}
+      <a href="#citar">{t.comoCitar}</a>
+    </nav>
+
+    <article class="artigo" id="texto">
+      {lingua === 'pt' && outrasLinguas.length === 0 && <p class="aviso">{t.soPortugues}</p>}
+      {lingua !== 'pt' && automatica && (
+        <p class="aviso automatica">{t.traducaoAutomatica} <a href={urlEntrada(e, 'pt')} lang="pt-PT">{t.lerOriginal}</a></p>
+      )}
+      {lingua === 'pt' && outrasLinguas.length > 0 && (
+        <p class="aviso">{t.tambemEm}: {outrasLinguas.map((l, i) => <>{i > 0 && ' · '}<a href={alternativas[l]} lang={l}>{nomeLingua[l]}</a></>)}</p>
+      )}
+      <div class="corpo" set:html={corpo} />
+
+      {e.relacionadas.length > 0 && (
+        <section id="ver-tambem" aria-labelledby="ver-tambem-t">
+          <h2 id="ver-tambem-t">{t.verTambem}</h2>
+          <div class="relacionadas">
+            {e.relacionadas.map((r) => {
+              const alvo = acervo.entradas.find((x) => x.slug === r.slug);
+              const l = alvo && temTraducao(alvo, lingua) ? lingua : 'pt';
+              const tt = alvo ? conteudo(alvo, l).titulo : r.titulo;
+              return (
+                <a href={alvo ? urlEntrada(alvo, l) : `/article/${r.slug}/`}>
+                  <span class={`etiqueta ${r.tipo}`}>{t.tipos[r.tipo] ?? r.tipo}</span>
+                  <span class="titulo">{tituloApresentacao(tt, r.tipo, l !== 'pt')}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {citacoes.length > 0 && (
+        <section id="citado-em" class="citado" aria-labelledby="citado-em-t">
+          <h2 id="citado-em-t" style="margin: 0">{t.citadoEm} <span class="etiqueta" style="vertical-align: middle">{t.citacoesEncontradas(citacoes.length)}</span></h2>
+          <ul>
+            {citacoes.map((ci) => (
+              <li>
+                <span><strong>{ci.titulo}</strong><span>{ci.fonte === 'wikipedia' ? t.wikipediaEm(linguaWikipedia(ci.lingua)) : ci.fonte}</span></span>
+                <a href={ci.url} rel="noopener">{t.verCitacao}</a>
+              </li>
+            ))}
+          </ul>
+          <p>{t.citacoesNota}</p>
+          <a href={`mailto:info@apca-madeira.org?subject=${encodeURIComponent(`Citação: ${c.titulo}`)}`}>{t.citouEntrada}</a>
+        </section>
+      )}
+
+      {referencias.length > 0 && (
+        <section id="bibliografia" aria-labelledby="bibliografia-t">
+          <h2 id="bibliografia-t">{t.bibliografia}</h2>
+          <ul class="referencias">
+            {referencias.map((r, i) => <li class={i >= VISIVEIS ? 'escondida' : undefined}>{r}</li>)}
+          </ul>
+          {referencias.length > VISIVEIS && (
+            <button type="button" class="botao-contorno" data-acao="referencias" style="margin-top: 14px">{t.mostrarReferencias(referencias.length)}</button>
+          )}
+        </section>
+      )}
+    </article>
+
+    <aside class="lateral" aria-label={t.nestaEntrada}>
+      <dl class="ficha">
+        <div><dt>{e.autores.length > 1 ? t.autores : t.autor}</dt><dd>{e.autores.map((a) => a.nome).join(', ')}</dd></div>
+        {subtemas.length > 0 && (
+          <div><dt>{t.subtemas}</dt><dd class="chips">{subtemas.map((s) => <a href={`${p}/temas/${s.tema}/#${s.slug}`}>{s.nome}</a>)}</dd></div>
+        )}
+        {citacoes.length > 0 && <div><dt>{t.citacoes}</dt><dd><a href="#citado-em">{t.citacoesEncontradas(citacoes.length)}</a></dd></div>}
+        <div><dt>{t.enderecoPermanente}</dt><dd>{enderecoPermanente}</dd></div>
+      </dl>
+      <section id="citar" class="citar" aria-labelledby="citar-t">
+        <h2 id="citar-t">{t.comoCitar}</h2>
+        <p id="texto-citacao">{citacao}</p>
+        <button type="button" data-acao="citar" data-copiado={t.citacaoCopiada}>{t.copiarCitacao}</button>
+        <span class="estado" role="status"></span>
+      </section>
+      <p style="margin: 0; font-size: 16px; color: var(--cinza)">
+        {t.erro} <a href={`mailto:info@apca-madeira.org?subject=${encodeURIComponent(`Correção: ${c.titulo} (${site}${urlEntrada(e, lingua)})`)}`}>{t.sugerirCorrecao}</a>
+      </p>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  document.addEventListener('click', async (ev) => {
+    const alvo = (ev.target as HTMLElement).closest<HTMLElement>('[data-acao]');
+    if (!alvo) return;
+    const acao = alvo.dataset.acao;
+    if (acao === 'imprimir') window.print();
+    if (acao === 'referencias') {
+      alvo.closest('section')?.querySelector('.referencias')?.classList.add('todas');
+      alvo.remove();
+    }
+    if (acao === 'citar') {
+      const texto = document.getElementById('texto-citacao')?.textContent ?? '';
+      await navigator.clipboard?.writeText(texto);
+      const estado = alvo.parentElement?.querySelector('.estado');
+      if (estado) estado.textContent = alvo.dataset.copiado ?? '';
+    }
+    if (acao === 'partilhar') {
+      if (navigator.share) {
+        try { await navigator.share({ title: document.title, url: location.href }); } catch { /* cancelado */ }
+      } else {
+        await navigator.clipboard?.writeText(location.href);
+        alvo.textContent = alvo.dataset.copiado ?? alvo.textContent;
+      }
+    }
+  });
+</script>

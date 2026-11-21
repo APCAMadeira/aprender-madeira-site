@@ -1,0 +1,26 @@
+---
+import type { Lingua } from '../lib/dados';
+import { PREFIXO, textos } from '../lib/textos';
+
+interface Props { lingua: Lingua }
+const { lingua } = Astro.props;
+const t = textos(lingua);
+const p = PREFIXO[lingua];
+---
+<footer class="rodape">
+  <div class="contentor">
+    <div class="marca">
+      <img src="/logo.png" alt="Aprender Madeira" width="379" height="232" />
+      <p>{t.projeto} <a href="https://www.apca-madeira.org">{t.apca}</a>. {t.acesso}</p>
+    </div>
+    <nav aria-label={t.menuRodape}>
+      <a href={`${p}/sobre/`}>{t.sobreProjeto}</a>
+      <a href={`${p}/equipa/`}>{t.equipa}</a>
+      <a href={`${p}/metodologia/`}>{t.metodologia}</a>
+      <a href={`${p}/normas/`}>{t.normas}</a>
+      <a href={`${p}/como-citar/`}>{t.comoCitar}</a>
+      <a href="mailto:info@apca-madeira.org">{t.contactos}</a>
+      <a href={`${p}/termos/`}>{t.termos}</a>
+    </nav>
+  </div>
+</footer>

@@ -1,0 +1,42 @@
+---
+import type { Lingua } from '../lib/dados';
+import { LINGUAS, PREFIXO, textos } from '../lib/textos';
+import Lupa from './Lupa.astro';
+
+interface Props { lingua: Lingua; alternativas: Partial<Record<Lingua, string>>; pesquisa: boolean }
+const { lingua, alternativas, pesquisa } = Astro.props;
+const t = textos(lingua);
+const p = PREFIXO[lingua];
+---
+<header class="cabecalho">
+  <div class="contentor">
+    <a class="logo" href={`${p}/`} aria-label={`Aprender Madeira — ${t.inicio}`}>
+      <img src="/logo.png" alt="Aprender Madeira" width="379" height="232" />
+    </a>
+    {pesquisa && (
+      <form class="pesquisa-topo" role="search" action={`${p}/pesquisa/`} method="get">
+        <label for="pesquisa-topo" class="so-leitores">{t.pesquisaTitulo}</label>
+        <input id="pesquisa-topo" type="search" name="q" placeholder={t.pesquisaTitulo} />
+        <button type="submit" class="botao-icone" aria-label={t.pesquisar}><Lupa /></button>
+      </form>
+    )}
+    <nav class="menu" aria-label={t.menuPrincipal}>
+      <a href={`${p}/temas/`}>{t.temas}</a>
+      <a href={`${p}/pessoas/`}>{t.pessoas}</a>
+      <a href={`${p}/lugares/`}>{t.lugares}</a>
+      <a href={`${p}/a-z/`}>{t.az}</a>
+      <a href={`${p}/colecoes/`}>{t.colecoes}</a>
+      <a href={`${p}/equipa/`}>{t.equipa}</a>
+      <a href={`${p}/sobre/`}>{t.sobre}</a>
+    </nav>
+    <nav class="linguas" aria-label={t.menuLingua}>
+      {LINGUAS.map((l) =>
+        alternativas[l] ? (
+          <a href={alternativas[l]} lang={l} hreflang={l} aria-current={l === lingua ? 'true' : undefined}>{l.toUpperCase()}</a>
+        ) : (
+          <span lang={l} title={t.linguas[l]}>{l.toUpperCase()}</span>
+        )
+      )}
+    </nav>
+  </div>
+</header>

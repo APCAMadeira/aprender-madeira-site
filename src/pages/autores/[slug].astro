@@ -1,0 +1,16 @@
+---
+import ListaEntradas from '../../components/ListaEntradas.astro';
+import { carregarAcervo } from '../../lib/dados';
+
+export async function getStaticPaths() {
+  const acervo = await carregarAcervo();
+  const autores = new Map<string, string>();
+  for (const e of acervo.entradas) for (const a of e.autores) if (a.slug) autores.set(a.slug, a.nome);
+  return [...autores].map(([slug, nome]) => ({
+    params: { slug },
+    props: { nome, slug, entradas: acervo.entradas.filter((e) => e.autores.some((a) => a.slug === slug)) },
+  }));
+}
+const { nome, slug, entradas } = Astro.props;
+---
+<ListaEntradas titulo={nome} introducao={`Entradas de ${nome} no Aprender Madeira.`} grupos={[{ entradas }]} caminho={`/autores/${slug}/`} />

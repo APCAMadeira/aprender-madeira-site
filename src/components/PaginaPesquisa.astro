@@ -1,0 +1,86 @@
+---
+// Pesquisa. Com PUBLIC_MEILI_URL e PUBLIC_MEILI_CHAVE (chave só de pesquisa) usa o Meilisearch;
+// sem elas, procura no índice leve /indice.json (títulos, autores e início do texto).
+import Base from '../layouts/Base.astro';
+import type { Lingua } from '../lib/dados';
+import { PREFIXO, textos } from '../lib/textos';
+import Lupa from './Lupa.astro';
+
+interface Props { lingua: Lingua }
+const { lingua } = Astro.props;
+const t = textos(lingua);
+const meili = { url: import.meta.env.PUBLIC_MEILI_URL ?? '', chave: import.meta.env.PUBLIC_MEILI_CHAVE ?? '' };
+const caminho = (l: Lingua) => `${PREFIXO[l]}/pesquisa/`;
+---
+<Base lingua={lingua} titulo={t.pesquisaTitulo} alternativas={{ pt: caminho('pt'), en: caminho('en'), es: caminho('es') }} pesquisaNoTopo={false}>
+  <div class="contentor seccao" style="padding-top: 40px; max-width: 900px">
+    <h1 style="margin: 0 0 20px; font-size: clamp(36px, 5vw, 52px)">{t.pesquisaTitulo}</h1>
+    <form role="search" method="get" style="display: flex; flex-wrap: wrap; gap: 8px">
+      <label for="q" class="so-leitores">{t.pesquisaTitulo}</label>
+      <input id="q" name="q" type="search" placeholder={t.exemploPesquisa}
+        style="flex: 1 1 280px; min-width: 0; height: 56px; padding: 0 18px; border: 2px solid var(--tinta); border-radius: var(--raio); font: inherit" />
+      <button type="submit" class="botao-lima"><Lupa />{t.pesquisar}</button>
+    </form>
+    <p id="resumo" role="status" style="margin: 20px 0 0; color: var(--cinza)"></p>
+    <ul id="resultados" class="resultados"></ul>
+  </div>
+  <div id="config" hidden data-lingua={lingua} data-meili-url={meili.url} data-meili-chave={meili.chave}
+    data-resultados={t.resultadosPara(0, '§')} data-vazio={t.semResultados} data-prefixo={PREFIXO[lingua]}
+    data-tipos={JSON.stringify(t.tipos)}></div>
+</Base>
+
+<script>
+  type Item = { s: string; t: string; k: string; a: string; r: string; l: string[] };
+  const cfg = document.getElementById('config')!.dataset;
+  const tipos = JSON.parse(cfg.tipos || '{}') as Record<string, string>;
+  const q = new URLSearchParams(location.search).get('q')?.trim() ?? '';
+  const campo = document.getElementById('q') as HTMLInputElement;
+  const lista = document.getElementById('resultados')!;
+  const resumo = document.getElementById('resumo')!;
+  campo.value = q;
+
+  const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const url = (it: Item) => (cfg.lingua !== 'pt' && it.l.includes(cfg.lingua!)) ? `${cfg.prefixo}/article/${it.s}/` : `/article/${it.s}/`;
+
+  function mostrar(itens: Item[]) {
+    lista.replaceChildren();
+    resumo.textContent = itens.length ? (cfg.resultados || '').replace('0', String(itens.length)).replace('§', q) : (cfg.vazio || '');
+    for (const it of itens.slice(0, 100)) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = url(it); a.textContent = it.t;
+      const p = document.createElement('p');
+      p.textContent = `${tipos[it.k] ?? it.k} · ${it.a} — ${it.r}`;
+      li.append(a, p);
+      lista.append(li);
+    }
+  }
+
+  async function pesquisar() {
+    if (!q) return;
+    if (cfg.meiliUrl && cfg.meiliChave) {
+      const r = await fetch(`${cfg.meiliUrl}/indexes/entradas/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.meiliChave}` },
+        body: JSON.stringify({ q, limit: 100 }),
+      });
+      const dados = await r.json();
+      mostrar((dados.hits ?? []) as Item[]);
+      return;
+    }
+    const indice = (await fetch('/indice.json').then((r) => r.json())) as Item[];
+    const termos = normalizar(q).split(/\s+/).filter(Boolean);
+    const pontuados = indice
+      .map((it) => {
+        const titulo = normalizar(it.t);
+        const tudo = `${titulo} ${normalizar(it.a)} ${normalizar(it.r)}`;
+        if (!termos.every((x) => tudo.includes(x))) return null;
+        const pontos = termos.reduce((s, x) => s + (titulo.includes(x) ? 10 : 0) + (titulo.startsWith(x) ? 5 : 0), 0);
+        return { it, pontos };
+      })
+      .filter((x): x is { it: Item; pontos: number } => x !== null)
+      .sort((a, b) => b.pontos - a.pontos || a.it.t.localeCompare(b.it.t, 'pt'));
+    mostrar(pontuados.map((x) => x.it));
+  }
+  pesquisar();
+</script>

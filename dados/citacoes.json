@@ -1,0 +1,123 @@
+{
+ "geradoEm": "2026-11-21T16:55:00Z",
+ "paginasWikipedia": 122,
+ "nota": "Amostra: contagem total real (pt 100, en 21, es 1); por entrada só as 30 entradas da amostra.",
+ "porEntrada": {
+  "arguim": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Lista de territórios do Império Português",
+    "url": "https://pt.wikipedia.org/wiki/Lista_de_territ%C3%B3rios_do_Imp%C3%A9rio_Portugu%C3%AAs"
+   },
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Arguim",
+    "url": "https://pt.wikipedia.org/wiki/Arguim"
+   }
+  ],
+  "clube-desportivo-nacional": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Dérbi da Madeira",
+    "url": "https://pt.wikipedia.org/wiki/D%C3%A9rbi_da_Madeira"
+   },
+   {
+    "fonte": "wikipedia",
+    "lingua": "en",
+    "titulo": "Estádio do Marítimo",
+    "url": "https://en.wikipedia.org/wiki/Est%C3%A1dio_do_Mar%C3%ADtimo"
+   }
+  ],
+  "energias-renovaveis": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Achada do Carvão",
+    "url": "https://pt.wikipedia.org/wiki/Achada_do_Carv%C3%A3o"
+   }
+  ],
+  "perestrelo-bartolomeu": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Cristóvão Colombo",
+    "url": "https://pt.wikipedia.org/wiki/Crist%C3%B3v%C3%A3o_Colombo"
+   }
+  ],
+  "zarco-joao-goncalves": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "João Gonçalves Zarco",
+    "url": "https://pt.wikipedia.org/wiki/Jo%C3%A3o_Gon%C3%A7alves_Zarco"
+   }
+  ],
+  "quinta-das-cruzes": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "João Gonçalves Zarco",
+    "url": "https://pt.wikipedia.org/wiki/Jo%C3%A3o_Gon%C3%A7alves_Zarco"
+   }
+  ],
+  "bordado": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Bordado Madeira",
+    "url": "https://pt.wikipedia.org/wiki/Bordado_Madeira"
+   }
+  ],
+  "conferencias-de-s-vicente-de-paulo": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Alberto Figueira Gomes",
+    "url": "https://pt.wikipedia.org/wiki/Alberto_Figueira_Gomes"
+   }
+  ],
+  "arquitetura-religiosa": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Capela da Nossa Senhora da Glória",
+    "url": "https://pt.wikipedia.org/wiki/Capela_da_Nossa_Senhora_da_Gl%C3%B3ria"
+   }
+  ],
+  "teixeira-tristao-vaz": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "Estátua de Tristão Vaz Teixeira",
+    "url": "https://pt.wikipedia.org/wiki/Est%C3%A1tua_de_Trist%C3%A3o_Vaz_Teixeira"
+   }
+  ],
+  "nascimento-joao-cabral-do": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "pt",
+    "titulo": "João Cabral do Nascimento",
+    "url": "https://pt.wikipedia.org/wiki/Jo%C3%A3o_Cabral_do_Nascimento"
+   }
+  ],
+  "se-do-funchal": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "en",
+    "titulo": "Cathedral of Funchal",
+    "url": "https://en.wikipedia.org/wiki/Cathedral_of_Funchal"
+   }
+  ],
+  "convento-de-sao-bernardino": [
+   {
+    "fonte": "wikipedia",
+    "lingua": "en",
+    "titulo": "Funchal",
+    "url": "https://en.wikipedia.org/wiki/Funchal"
+   }
+  ]
+ }
+}

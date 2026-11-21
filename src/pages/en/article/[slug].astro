@@ -1,0 +1,16 @@
+---
+import PaginaEntrada from '../../../components/PaginaEntrada.astro';
+import { carregarAcervo } from '../../../lib/dados';
+
+export async function getStaticPaths() {
+  const acervo = await carregarAcervo();
+  return acervo.entradas
+    .filter((e) => e.traducoes.some((t) => t.lingua === 'en'))
+    .map((entrada) => ({
+      params: { slug: entrada.traducoes.find((t) => t.lingua === 'en')?.slug || entrada.slug },
+      props: { entrada },
+    }));
+}
+const { entrada } = Astro.props;
+---
+<PaginaEntrada entrada={entrada} lingua="en" />

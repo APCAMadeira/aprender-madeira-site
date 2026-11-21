@@ -1,0 +1,33 @@
+---
+// Página simples com uma lista de entradas (temas, pessoas, lugares, A–Z, autores).
+import Base from '../layouts/Base.astro';
+import type { Entrada } from '../lib/dados';
+import { urlEntrada } from '../lib/entradas';
+import { textos } from '../lib/textos';
+import { tituloApresentacao } from '../lib/titulos';
+
+interface Grupo { id?: string; titulo?: string; entradas: Entrada[] }
+interface Props { titulo: string; introducao?: string; grupos: Grupo[]; caminho: string }
+const { titulo, introducao, grupos, caminho } = Astro.props;
+const t = textos('pt');
+const ordenar = (lista: Entrada[]) => [...lista].sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt'));
+---
+<Base lingua="pt" titulo={titulo} descricao={introducao} alternativas={{ pt: caminho }}>
+  <div class="contentor seccao" style="padding-top: 40px">
+    <h1 style="margin: 0 0 12px; font-size: clamp(36px, 5vw, 52px)">{titulo}</h1>
+    {introducao && <p style="margin: 0 0 24px; color: var(--cinza); max-width: 44em">{introducao}</p>}
+    {grupos.map((g) => (
+      <section id={g.id} style="margin-top: 32px">
+        {g.titulo && <h2 style="font-size: 26px; margin: 0 0 8px">{g.titulo} <span style="color: var(--cinza); font-weight: 400">({g.entradas.length})</span></h2>}
+        <ul class="resultados" style="margin-top: 0">
+          {ordenar(g.entradas).map((e) => (
+            <li>
+              <a href={urlEntrada(e, 'pt')}>{tituloApresentacao(e.titulo, e.tipo)}</a>
+              <p>{t.tipos[e.tipo] ?? e.tipo} · {e.autores.map((a) => a.nome).join(', ')}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </div>
+</Base>

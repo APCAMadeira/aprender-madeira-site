@@ -1,0 +1,81 @@
+---
+// Abertura da página inicial: fotografias do acervo a rodar por ordem aleatória, com botão de pausa
+// (obrigatório pelas regras de acessibilidade WCAG 2.2.2) e paragem automática para quem pediu menos animação.
+import type { FotoAbertura, Lingua } from '../lib/dados';
+import { LARGURAS, urlImagem } from '../lib/dados';
+import { PREFIXO, formatarNumero, textos } from '../lib/textos';
+import Lupa from './Lupa.astro';
+
+interface Props { lingua: Lingua; fotos: FotoAbertura[]; totalEntradas: number }
+const { lingua, fotos, totalEntradas } = Astro.props;
+const t = textos(lingua);
+---
+<section class="abertura" aria-labelledby="titulo-abertura" data-pausa={t.pausa} data-continuar={t.continuar}>
+  {fotos.map((f, i) => (
+    <img
+      class={i === 0 ? 'foto visivel' : 'foto'}
+      src={urlImagem(f.id, LARGURAS.abertura)}
+      alt={f.alt}
+      aria-hidden={i === 0 ? undefined : 'true'}
+      data-legenda={f.legenda}
+      loading={i === 0 ? 'eager' : 'lazy'}
+      fetchpriority={i === 0 ? 'high' : undefined}
+      decoding="async"
+    />
+  ))}
+  <div class="contentor">
+    <div class="painel">
+      <h1 id="titulo-abertura">{t.lema}</h1>
+      <p>{t.subtitulo}</p>
+      <form role="search" action={`${PREFIXO[lingua]}/pesquisa/`} method="get">
+        <label for="pesquisa-abertura">{t.pesquisarEm(formatarNumero(totalEntradas, lingua))}</label>
+        <div class="campo">
+          <input id="pesquisa-abertura" type="search" name="q" placeholder={t.exemploPesquisa} />
+          <button type="submit" class="botao-lima"><Lupa />{t.pesquisar}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {fotos.length > 0 && (
+    <div class="controlo">
+      <p class="legenda">{fotos[0].legenda}</p>
+      {fotos.length > 1 && <button type="button" aria-pressed="false">{t.pausa}</button>}
+    </div>
+  )}
+</section>
+
+<script>
+  const seccao = document.querySelector<HTMLElement>('.abertura');
+  const fotos = seccao ? Array.from(seccao.querySelectorAll<HTMLImageElement>('.foto')) : [];
+  const legenda = seccao?.querySelector<HTMLElement>('.legenda');
+  const botao = seccao?.querySelector<HTMLButtonElement>('.controlo button');
+  if (seccao && fotos.length > 1 && botao && legenda) {
+    const ordem = fotos.map((_, i) => i);
+    for (let i = ordem.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ordem[i], ordem[j]] = [ordem[j], ordem[i]];
+    }
+    let passo = 0;
+    const mostrar = (n: number) => {
+      fotos.forEach((f, i) => {
+        const visivel = i === n;
+        f.classList.toggle('visivel', visivel);
+        if (visivel) f.removeAttribute('aria-hidden'); else f.setAttribute('aria-hidden', 'true');
+      });
+      legenda.textContent = fotos[n].dataset.legenda ?? '';
+    };
+    mostrar(ordem[0]);
+    let pausa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const atualizarBotao = () => {
+      botao.textContent = pausa ? seccao.dataset.continuar ?? '' : seccao.dataset.pausa ?? '';
+      botao.setAttribute('aria-pressed', String(pausa));
+    };
+    atualizarBotao();
+    botao.addEventListener('click', () => { pausa = !pausa; atualizarBotao(); });
+    setInterval(() => {
+      if (pausa || document.hidden) return;
+      passo = (passo + 1) % ordem.length;
+      mostrar(ordem[passo]);
+    }, 8000);
+  }
+</script>

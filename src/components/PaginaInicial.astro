@@ -1,0 +1,140 @@
+---
+import Base from '../layouts/Base.astro';
+import Abertura from './Abertura.astro';
+import type { Entrada, Lingua } from '../lib/dados';
+import { LARGURAS, carregarAcervo, urlImagem } from '../lib/dados';
+import { carregarCitacoes, conteudo, excerto, temTraducao, urlEntrada } from '../lib/entradas';
+import { escolhaDaSemana } from '../lib/semana';
+import { PREFIXO, formatarData, formatarNumero, nomeTema, textos } from '../lib/textos';
+import { tituloApresentacao } from '../lib/titulos';
+
+interface Props { lingua: Lingua }
+const { lingua } = Astro.props;
+const t = textos(lingua);
+const p = PREFIXO[lingua];
+const acervo = await carregarAcervo();
+const citacoes = await carregarCitacoes();
+const n = (x: number) => formatarNumero(x, lingua);
+
+const horizontal = (e: Entrada) => e.imagens.some((i) => (i.largura ?? 0) >= (i.altura ?? 1) * 1.15);
+const imagemDe = (e: Entrada) => e.imagens.find((i) => (i.largura ?? 0) >= (i.altura ?? 1) * 1.15) ?? e.imagens[0];
+const comImagem = acervo.entradas.filter(horizontal);
+const historias = escolhaDaSemana(comImagem.filter((e) => e.tipo !== 'biografia'), 4, 'historias');
+const pessoas = escolhaDaSemana(acervo.entradas.filter((e) => e.tipo === 'biografia'), 6, 'pessoas');
+
+// Os dois últimos temas do mosaico levam uma fotografia de uma entrada desse tema (muda todas as semanas).
+const temas = acervo.temas.map((tema, i) => {
+  const candidatas = comImagem.filter((e) => e.categorias.some((c) => c.tema === tema.slug));
+  const foto = i >= 5 ? escolhaDaSemana(candidatas, 1, `tema-${tema.slug}`)[0] : undefined;
+  return { ...tema, foto: foto ? imagemDe(foto) : undefined };
+});
+const totalSubtemas = acervo.temas.reduce((s, x) => s + x.subtemas.length, 0);
+
+const titulo = (e: Entrada) => {
+  const c = conteudo(e, lingua);
+  return tituloApresentacao(c.titulo, e.tipo, Boolean(c.traducao));
+};
+const ligacao = (e: Entrada) => urlEntrada(e, temTraducao(e, lingua) ? lingua : 'pt');
+const inicial = (e: Entrada) => e.titulo.trim().charAt(0).toLocaleUpperCase('pt-PT');
+const alternativas = { pt: '/', en: '/en/', es: '/es/' };
+const hoje = formatarData(new Date().toISOString(), lingua);
+---
+<Base lingua={lingua} titulo="Aprender Madeira" descricao={t.subtitulo} alternativas={alternativas} pesquisaNoTopo={false}>
+  <Abertura lingua={lingua} fotos={acervo.abertura} totalEntradas={acervo.totais.entradas} />
+
+  <section class="seccao" aria-labelledby="temas">
+    <div class="contentor">
+      <div class="seccao-titulo">
+        <h2 id="temas">{t.explorarTema}</h2>
+        <a href={`${p}/temas/`}>{t.verSubtemas(totalSubtemas)}</a>
+      </div>
+      <div class="grelha">
+        {temas.map((tema, i) =>
+          tema.foto ? (
+            <a class="tema foto" href={`${p}/temas/${tema.slug}/`}>
+              <img src={urlImagem(tema.foto.id, LARGURAS.cartao)} alt="" loading="lazy" decoding="async" />
+              <span class="faixa"><span class="numero">{n(tema.total)}</span><span class="nome">{nomeTema(tema.nome, lingua)}</span></span>
+            </a>
+          ) : (
+            <a class={`tema c${i % 5}`} href={`${p}/temas/${tema.slug}/`}>
+              <svg aria-hidden="true" width="120" height="110" viewBox="0 0 120 110"><polygon points="10,0 60,0 100,110 50,110" fill="#ffffff" opacity="0.3"></polygon></svg>
+              <span class="numero">{n(tema.total)}</span>
+              <span class="nome">{nomeTema(tema.nome, lingua)}</span>
+            </a>
+          )
+        )}
+        <a class="tema indice" href={`${p}/a-z/`}>
+          <span class="nome">{t.todasAZ}</span>
+          <span class="letras">A B C D E F G H I J L M N O P Q R S T U V X Z</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccao" aria-labelledby="historias" style="padding-top: 24px">
+    <div class="contentor">
+      <div class="seccao-titulo">
+        <div><h2 id="historias">{t.historias}</h2><p>{t.historiasNota}</p></div>
+      </div>
+      <div class="grelha" style="gap: 28px 20px">
+        {historias.map((e) => {
+          const img = imagemDe(e);
+          const c = conteudo(e, lingua);
+          return (
+            <article class="cartao">
+              <img src={urlImagem(img.id, LARGURAS.cartao)} alt={img.legenda || ''} loading="lazy" decoding="async" />
+              <span class={`etiqueta ${e.tipo}`}>{t.tipos[e.tipo] ?? e.tipo}</span>
+              <h3><a href={ligacao(e)}>{titulo(e)}</a>{!temTraducao(e, lingua) && <span class="quem"> ({t.emPortugues})</span>}</h3>
+              <p class="quem">{e.autores.map((a) => a.nome).join(', ')}</p>
+              <p>{c.resumo ? excerto(c.resumo, 120) : excerto(c.corpo, 120)}</p>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <section class="numeros" aria-label={t.numeros}>
+    <div class="contentor" style="padding: 0">
+      <div class="grelha-numeros">
+        <div><span class="valor">{n(acervo.totais.entradas)}</span>{t.nEntradas}</div>
+        <div><span class="valor">{n(acervo.totais.biografias)}</span>{t.nBiografias}</div>
+        <div><span class="valor azul">{n(acervo.totais.autores)}</span>{t.nAutores}</div>
+        <div><span class="valor azul">{n(acervo.totais.traducoes)}</span>{t.nTraducoes}</div>
+        {citacoes.paginasWikipedia > 0 && <div><span class="valor">{n(citacoes.paginasWikipedia)}</span>{t.nWikipedia}</div>}
+      </div>
+      <p>{t.numerosNota(hoje)}</p>
+    </div>
+  </section>
+
+  <section class="seccao" aria-labelledby="pessoas">
+    <div class="contentor">
+      <div class="seccao-titulo">
+        <div><h2 id="pessoas">{t.pessoas}</h2><p>{t.pessoasNota}</p></div>
+        <a href={`${p}/pessoas/`}>{t.verBiografias(n(acervo.totais.biografias))}</a>
+      </div>
+      <ul class="pessoas">
+        {pessoas.map((e) => (
+          <li>
+            <span class="inicial" aria-hidden="true">{inicial(e)}</span>
+            <span><a href={ligacao(e)}>{titulo(e)}</a><span>{t.por} {e.autores.map((a) => a.nome).join(', ')}</span></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="seccao colecoes" aria-labelledby="colecoes">
+    <div class="contentor">
+      <div class="seccao-titulo"><h2 id="colecoes">{t.colecoes}</h2></div>
+      <div class="grelha" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+        {t.colecoes_.map((c) => (
+          <a class="colecao" href={`${p}/colecoes/`}><span class="nome">{c.nome}</span><span class="texto">{c.texto}</span></a>
+        ))}
+        {t.colecoesPrep.map((c) => (
+          <div class="colecao prep"><span class="etiqueta">{t.colecoesFuturas}</span><span class="nome">{c.nome}</span><span class="texto">{c.texto}</span></div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

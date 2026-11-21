@@ -1,0 +1,8 @@
+---
+import ListaEntradas from '../components/ListaEntradas.astro';
+import { carregarAcervo } from '../lib/dados';
+
+const acervo = await carregarAcervo();
+const entradas = acervo.entradas.filter((e) => e.tipo === 'biografia');
+---
+<ListaEntradas titulo="Pessoas" introducao="Biografias de pessoas ligadas à história e à cultura da Madeira." grupos={[{ entradas }]} caminho="/pessoas/" />

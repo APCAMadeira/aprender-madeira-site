@@ -1,0 +1,19 @@
+---
+import ListaEntradas from '../../components/ListaEntradas.astro';
+import { carregarAcervo } from '../../lib/dados';
+
+export async function getStaticPaths() {
+  const acervo = await carregarAcervo();
+  return acervo.temas.map((tema) => ({
+    params: { slug: tema.slug },
+    props: {
+      tema,
+      grupos: tema.subtemas
+        .map((s) => ({ id: s.slug, titulo: s.nome, entradas: acervo.entradas.filter((e) => e.categorias.some((c) => c.slug === s.slug)) }))
+        .filter((g) => g.entradas.length > 0),
+    },
+  }));
+}
+const { tema, grupos } = Astro.props;
+---
+<ListaEntradas titulo={tema.nome} grupos={grupos} caminho={`/temas/${tema.slug}/`} />

@@ -1,0 +1,12 @@
+---
+import ListaEntradas from '../components/ListaEntradas.astro';
+import { carregarAcervo } from '../lib/dados';
+
+const acervo = await carregarAcervo();
+const grupos = [
+  { id: 'lugares', titulo: 'Lugares', entradas: acervo.entradas.filter((e) => e.tipo === 'lugar') },
+  { id: 'edificios', titulo: 'Edifícios', entradas: acervo.entradas.filter((e) => e.tipo === 'edificio') },
+  { id: 'rotas', titulo: 'Rotas', entradas: acervo.entradas.filter((e) => e.tipo === 'rota') },
+].filter((g) => g.entradas.length > 0);
+---
+<ListaEntradas titulo="Lugares" introducao="Lugares, edifícios e rotas da Madeira e do Porto Santo." grupos={grupos} caminho="/lugares/" />

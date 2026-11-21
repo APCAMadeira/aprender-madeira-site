@@ -1,0 +1,23 @@
+---
+import Base from '../../layouts/Base.astro';
+import { carregarAcervo } from '../../lib/dados';
+import { formatarNumero } from '../../lib/textos';
+
+const acervo = await carregarAcervo();
+const conta = (sub: string) => acervo.entradas.filter((e) => e.categorias.some((c) => c.slug === sub)).length;
+---
+<Base lingua="pt" titulo="Temas" descricao="Os grandes temas e subtemas do Aprender Madeira." alternativas={{ pt: '/temas/' }}>
+  <div class="contentor seccao" style="padding-top: 40px">
+    <h1 style="margin: 0 0 24px; font-size: clamp(36px, 5vw, 52px)">Temas</h1>
+    <div class="grelha" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 28px">
+      {acervo.temas.map((tema) => (
+        <section>
+          <h2 style="font-size: 26px; margin: 0 0 10px"><a href={`/temas/${tema.slug}/`}>{tema.nome}</a> <span style="color: var(--cinza); font-weight: 400; font-size: 18px">{formatarNumero(tema.total, 'pt')}</span></h2>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.9">
+            {tema.subtemas.map((s) => <li><a href={`/temas/${tema.slug}/#${s.slug}`}>{s.nome}</a> <span style="color: var(--cinza)">({conta(s.slug)})</span></li>)}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,12 @@
+---
+// Página da equipa de gestão. Conteúdo a enviar pelo Giramondu (nomes, funções, fotografias, notas curtas).
+import Base from '../layouts/Base.astro';
+import { textos } from '../lib/textos';
+const t = textos('pt');
+---
+<Base lingua="pt" titulo={t.equipaTitulo} alternativas={{ pt: '/equipa/' }}>
+  <div class="contentor seccao" style="padding-top: 40px">
+    <h1 style="margin: 0 0 16px; font-size: clamp(36px, 5vw, 52px)">{t.equipaTitulo}</h1>
+    <p style="max-width: 40em">{t.equipaTexto}</p>
+  </div>
+</Base>
