@@ -4,6 +4,9 @@
 #   --semanal  também atualiza as citações da Wikipédia (corre uma vez por semana)
 # Variáveis opcionais: DESTINO (pasta publicada), ENV_FILE (ficheiro com as chaves).
 set -euo pipefail
+# Tudo dentro de { ... } para o bash ler o script inteiro antes de o correr
+# (o git pull abaixo pode alterar este ficheiro enquanto corre).
+{
 
 SITE=/opt/aprendermadeira/site
 ENV_FILE=${ENV_FILE:-/opt/aprendermadeira/env/site.env}
@@ -36,3 +39,5 @@ rsync -a "$PERSISTENTE/imagens/" "$DESTINO/imagens/"
 chown -R giramo6:giramo6 "$DESTINO"
 
 echo "$(date '+%F %T') site publicado em $DESTINO ($(git rev-parse --short HEAD))" | tee -a "$REGISTO"
+exit 0
+}
