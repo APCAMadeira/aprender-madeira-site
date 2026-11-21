@@ -11,6 +11,10 @@ DESTINO=${DESTINO:-/home/giramo6/aprendermadeira2026/teste}
 PERSISTENTE=/opt/aprendermadeira/site-dados   # imagens copiadas e citações (fora do Git)
 REGISTO=/var/log/aprendermadeira-site.log
 
+# Só uma publicação de cada vez (a semanal e a dos 15 minutos esperam uma pela outra)
+exec 9>/var/lock/aprendermadeira-site.lock
+flock -w 3600 9 || { echo "$(date '+%F %T') outra publicação em curso; desisto" | tee -a "$REGISTO"; exit 1; }
+
 cd "$SITE"
 git pull -q --ff-only
 mkdir -p "$PERSISTENTE/imagens"

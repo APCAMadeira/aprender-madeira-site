@@ -1,0 +1,6 @@
+# Site público do Aprender Madeira (instalar em /etc/cron.d/aprendermadeira-site)
+# - a cada 15 minutos: reconstrói o site se houver alterações no Directus ou código novo no GitHub
+# - segunda-feira às 00:10 (UTC): reconstrução semanal com citações da Wikipédia e novas escolhas da semana
+CRON_TZ=UTC
+*/15 * * * * root /usr/bin/python3 /opt/aprendermadeira/site/servidor/verificar_e_publicar.py >> /var/log/aprendermadeira-site.log 2>&1
+10 0 * * 1 root /bin/bash /opt/aprendermadeira/site/servidor/publicar.sh --semanal >> /var/log/aprendermadeira-site.log 2>&1
