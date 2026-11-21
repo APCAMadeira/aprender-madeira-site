@@ -1,7 +1,11 @@
 // Conta os artigos da Wikipédia que ligam ao Aprender Madeira e grava dados/citacoes.json.
 // Corre no servidor uma vez por semana, antes de reconstruir o site. Não precisa de chave nem tem custo.
+// No servidor grava fora do repositório (CITACOES_FICHEIRO), para não alterar ficheiros do Git.
 // Uso: node scripts/citacoes.mjs
 import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
+
+const FICHEIRO = process.env.CITACOES_FICHEIRO || 'dados/citacoes.json';
 
 const WIKIS = ['pt', 'en', 'es'];
 const CONSULTAS = ['aprenderamadeira.net', '*.aprenderamadeira.net'];
@@ -55,8 +59,8 @@ for (const wiki of WIKIS) {
   }
 }
 
-await mkdir('dados', { recursive: true });
-await writeFile('dados/citacoes.json', JSON.stringify({
+await mkdir(dirname(FICHEIRO), { recursive: true });
+await writeFile(FICHEIRO, JSON.stringify({
   geradoEm: new Date().toISOString(), paginasWikipedia: paginas.size, porEntrada,
 }, null, 1));
 console.log(`${paginas.size} artigos da Wikipédia; ${Object.keys(porEntrada).length} entradas citadas.`);

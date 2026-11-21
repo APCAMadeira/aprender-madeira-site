@@ -71,8 +71,9 @@ let cacheCitacoes: Promise<Citacoes> | null = null;
 export function carregarCitacoes(): Promise<Citacoes> {
   if (!cacheCitacoes) {
     cacheCitacoes = (async () => {
-      if (!existsSync('dados/citacoes.json')) return { paginasWikipedia: 0, porEntrada: {} };
-      return JSON.parse(await readFile('dados/citacoes.json', 'utf-8')) as Citacoes;
+      const ficheiro = process.env.CITACOES_FICHEIRO || 'dados/citacoes.json';
+      if (!existsSync(ficheiro)) return { paginasWikipedia: 0, porEntrada: {} };
+      return JSON.parse(await readFile(ficheiro, 'utf-8')) as Citacoes;
     })();
   }
   return cacheCitacoes;

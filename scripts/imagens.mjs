@@ -10,7 +10,7 @@ if (!URL_D || !TOKEN) {
   console.error('Faltam DIRECTUS_URL e DIRECTUS_TOKEN.');
   process.exit(1);
 }
-const PASTA = 'public/imagens';
+const PASTA = process.env.IMAGENS_DIR || 'public/imagens';
 const CARTAO = 640, GRANDE = 1600, ABERTURA = 1920;
 
 async function api(caminho) {
