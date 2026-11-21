@@ -25,7 +25,8 @@ docker run --rm --network host --env-file "$ENV_FILE" \
   -v "$SITE":/app -v "$PERSISTENTE":/persistente -w /app node:22-alpine sh -c "$PASSOS"
 
 # Páginas do site (sem tocar na proteção do site de teste) e imagens à parte
-rsync -a --delete --exclude '.htaccess' --exclude '.htpasswd' --exclude '.well-known' --exclude 'imagens/' \
+rsync -a --delete --exclude '.htaccess' --exclude '.htpasswd' --exclude '.well-known' --exclude '.user.ini' \
+  --exclude 'robots.txt' --exclude 'php.ini' --exclude 'cgi-bin/' --exclude 'imagens/' \
   "$SITE/dist/" "$DESTINO/"
 rsync -a "$PERSISTENTE/imagens/" "$DESTINO/imagens/"
 chown -R giramo6:giramo6 "$DESTINO"
