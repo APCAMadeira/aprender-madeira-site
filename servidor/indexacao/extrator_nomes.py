@@ -25,12 +25,16 @@ URL = os.environ.get('DIRECTUS_URL', 'http://127.0.0.1:8055')
 TOKEN = open(os.environ.get('TOKEN_FICHEIRO', '/env/operador.token')).read().strip()
 SAIDA = os.environ.get('SAIDA', '/out/extrator_nomes.json')
 BRUTAS = os.environ.get('BRUTAS', '/out/entidades_brutas.json')
-MIN_ENTRADAS = int(os.environ.get('MIN_ENTRADAS', '3'))
+MIN_ENTRADAS = int(os.environ.get('MIN_ENTRADAS', '5'))
 TIPO = {'PER': 'pessoa', 'LOC': 'lugar', 'ORG': 'instituicao'}
 # nomes demasiado gerais para servirem de palavra-chave
 IGNORAR = {'deus', 'nossa senhora', 'sua majestade', 'el-rei', 'santa se', 'cristo', 'jesus', 'jesus cristo',
            'virgem maria', 'europa', 'portugal', 'lisboa', 'madeira', 'ilha da madeira', 'arquipelago da madeira',
-           'regiao autonoma da madeira', 'atlantico', 'oceano atlantico', 'mundo', 'reino', 'governo', 'igreja'}
+           'regiao autonoma da madeira', 'atlantico', 'oceano atlantico', 'mundo', 'reino', 'governo', 'igreja',
+           'festa', 'junta', 'assembleia geral', 'decreto legislativo regional'}
+# ruas e largos: são lugares, mesmo quando o modelo os lê como pessoas; a abreviatura passa a extenso
+VIAS = {'R.': 'Rua', 'Lg.': 'Largo', 'Av.': 'Avenida', 'Trav.': 'Travessa', 'Calç.': 'Calçada'}
+VIA = re.compile(r'^(R\.|Rua|Lg\.|Largo|Av\.|Avenida|Trav\.|Travessa|Calç\.|Calçada|Caminho|Beco|Praça) ')
 # formas abreviadas e por extenso que contam como a mesma (S. Jorge = São Jorge; D. Manuel = Dom Manuel)
 ABREV = {'s': 's', 'sao': 's', 'santo': 's', 'santa': 's', 'sto': 's', 'sta': 's', 's.to': 's', 's.ta': 's',
          'd': 'd', 'dom': 'd', 'dona': 'd', 'fr': 'fr', 'frei': 'fr', 'pe': 'pe', 'padre': 'pe', 'dr': 'dr',
@@ -98,7 +102,13 @@ def ler_com_spacy(entradas):
 def extrair():
     entradas = api('GET', '/items/entradas?limit=-1&fields=id,slug,corpo&filter[estado][_eq]=publicado')
     termos = api('GET', '/items/palavras_chave?limit=-1&fields=id,termo,variantes')
+    autores = api('GET', '/items/autores?limit=-1&fields=nome,nome_citacao')
     conhecidos = {chave(x) for x in IGNORAR}
+    # autores do Aprender Madeira: aparecem sobretudo como fonte citada ou crédito de fotografia
+    for a in autores:
+        for nome in (a.get('nome'), a.get('nome_citacao')):
+            if nome:
+                conhecidos.add(chave(nome))
     for t in termos:
         conhecidos.add(chave(re.sub(r'\s*\((concelho|freguesia)\)$', '', t['termo'])))
         for v in (t.get('variantes') or []):
@@ -129,6 +139,9 @@ def extrair():
             p = palavras[0].lower()
             if minus[p] >= 0.15 * max(maius[p], 1):      # palavra comum escrita com maiúscula
                 continue
+        if VIA.match(texto):
+            rotulo = 'LOC'
+            texto = VIAS.get(palavras[0], palavras[0]) + texto[len(palavras[0]):]
         k = chave(texto)
         if not k or k in conhecidos:
             continue
