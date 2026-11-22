@@ -2,10 +2,14 @@
 """Extrator de nomes (spaCy, modelo português): propostas de pessoas, lugares e instituições.
 
 Fase 1 (sem alterar nada):  python3 extrator_nomes.py            -> grava /out/extrator_nomes.json
+                            (a leitura com o spaCy fica guardada em /out/entidades_brutas.json;
+                             --refazer obriga a ler tudo outra vez)
 Fase 2 (gravar propostas):  python3 extrator_nomes.py --aplicar  -> cria termos e ligações no Directus
                             (estado «proposta», origem «extrator»), sem tocar no que já existe.
 
 Só propõe nomes que ainda não são termos e que aparecem em pelo menos MIN_ENTRADAS entradas diferentes.
+Antes da leitura tira do texto as legendas das imagens e as citações bibliográficas entre parênteses,
+para não confundir autores citados e créditos de fotografias com assuntos das entradas.
 Corre no servidor, num contentor Python, com a chave de administração (não sai do servidor).
 """
 import collections
@@ -20,12 +24,18 @@ import urllib.request
 URL = os.environ.get('DIRECTUS_URL', 'http://127.0.0.1:8055')
 TOKEN = open(os.environ.get('TOKEN_FICHEIRO', '/env/operador.token')).read().strip()
 SAIDA = os.environ.get('SAIDA', '/out/extrator_nomes.json')
-MIN_ENTRADAS = int(os.environ.get('MIN_ENTRADAS', '2'))
+BRUTAS = os.environ.get('BRUTAS', '/out/entidades_brutas.json')
+MIN_ENTRADAS = int(os.environ.get('MIN_ENTRADAS', '3'))
 TIPO = {'PER': 'pessoa', 'LOC': 'lugar', 'ORG': 'instituicao'}
-# palavras que o modelo costuma marcar como nomes mas não interessam como termos
-IGNORAR = {'deus', 'nossa senhora', 'sua majestade', 'el-rei', 'santa se', 'sao', 'santo', 'dom', 'senhor', 'cristo',
-           'jesus', 'jesus cristo', 'virgem maria', 'europa', 'portugal', 'lisboa', 'madeira', 'ilha da madeira',
-           'arquipelago da madeira', 'regiao autonoma da madeira', 'atlantico', 'oceano atlantico'}
+# nomes demasiado gerais para servirem de palavra-chave
+IGNORAR = {'deus', 'nossa senhora', 'sua majestade', 'el-rei', 'santa se', 'cristo', 'jesus', 'jesus cristo',
+           'virgem maria', 'europa', 'portugal', 'lisboa', 'madeira', 'ilha da madeira', 'arquipelago da madeira',
+           'regiao autonoma da madeira', 'atlantico', 'oceano atlantico', 'mundo', 'reino', 'governo', 'igreja'}
+# formas abreviadas e por extenso que contam como a mesma (S. Jorge = São Jorge; D. Manuel = Dom Manuel)
+ABREV = {'s': 's', 'sao': 's', 'santo': 's', 'santa': 's', 'sto': 's', 'sta': 's', 's.to': 's', 's.ta': 's',
+         'd': 'd', 'dom': 'd', 'dona': 'd', 'fr': 'fr', 'frei': 'fr', 'pe': 'pe', 'padre': 'pe', 'dr': 'dr',
+         'doutor': 'dr', 'n': 'n', 'nossa': 'n', 'sr': 'sr', 'sra': 'sr', 'senhor': 'sr', 'senhora': 'sr'}
+CREDITO = re.compile(r'\b(Arqui?\.|Arquivo|Fot\.|Foto|Fotografia|Col\.|Coleção|Colecção|Créditos?)\b')
 
 
 def api(metodo, caminho, dados=None):
@@ -37,53 +47,103 @@ def api(metodo, caminho, dados=None):
         return json.loads(texto)['data'] if texto else None
 
 
+def sem_acentos(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+
 def chave(s):
-    s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-    return re.sub(r'\s+', ' ', s.lower()).strip()
+    """Forma de comparação: sem acentos, minúsculas, abreviaturas uniformizadas."""
+    palavras = re.findall(r"[a-z0-9]+(?:\.(?:to|ta))?", sem_acentos(s).lower().replace('-', ' '))
+    return ' '.join(ABREV.get(p, p) for p in palavras)
 
 
 def slugify(s):
-    return re.sub(r'[^a-z0-9]+', '-', chave(s)).strip('-') or 'termo'
+    return re.sub(r'[^a-z0-9]+', '-', sem_acentos(s).lower()).strip('-') or 'termo'
+
+
+def texto_limpo(corpo):
+    """HTML -> texto, sem legendas de imagens nem citações bibliográficas."""
+    corpo = re.sub(r'(?is)<figure.*?</figure>|<figcaption.*?</figcaption>', ' ', corpo or '')
+    partes, anterior_tinha_imagem = [], False
+    for p in re.split(r'(?i)</p>', corpo):
+        tem_imagem = bool(re.search(r'(?i)<img', p))
+        texto = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', ' ', p))).strip()
+        legenda = len(texto) < 300 and (tem_imagem or anterior_tinha_imagem or CREDITO.search(texto)
+                                        or re.match(r'(?i)fig(ura)?\.?\s*\d', texto))
+        if texto and not legenda:
+            partes.append(texto)
+        anterior_tinha_imagem = tem_imagem
+    texto = '\n'.join(partes)
+    # citações do tipo (CARITA, 1991, II, 328) ou (ANTT, Chancelaria…)
+    texto = re.sub(r'\([^()]{0,300}?\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}\b[^()]{0,300}?\)', ' ', texto)
+    return texto
+
+
+def ler_com_spacy(entradas):
+    import spacy
+    nlp = spacy.load('pt_core_news_lg', disable=['lemmatizer'])
+    nlp.max_length = 3_000_000
+    textos = [(e['id'], texto_limpo(e['corpo'])) for e in entradas]
+    brutas = []
+    for n, (doc, (eid, _)) in enumerate(zip(nlp.pipe((t for _, t in textos), batch_size=8), textos)):
+        for ent in doc.ents:
+            if ent.label_ in TIPO:
+                brutas.append([eid, ent.text, ent.label_, ent.sent.text.strip()[:600]])
+        if n % 100 == 0:
+            print(f'{n}/{len(textos)} entradas', flush=True)
+    json.dump(brutas, open(BRUTAS, 'w'), ensure_ascii=False)
+    return brutas
 
 
 def extrair():
-    import spacy
     entradas = api('GET', '/items/entradas?limit=-1&fields=id,slug,corpo&filter[estado][_eq]=publicado')
     termos = api('GET', '/items/palavras_chave?limit=-1&fields=id,termo,variantes')
-    conhecidos = set(IGNORAR)
+    conhecidos = {chave(x) for x in IGNORAR}
     for t in termos:
         conhecidos.add(chave(re.sub(r'\s*\((concelho|freguesia)\)$', '', t['termo'])))
         for v in (t.get('variantes') or []):
             conhecidos.add(chave(v))
-    nlp = spacy.load('pt_core_news_lg', disable=['lemmatizer'])
-    nlp.max_length = 3_000_000
+    if os.path.exists(BRUTAS) and '--refazer' not in sys.argv:
+        brutas = json.load(open(BRUTAS))
+        print(f'leitura spaCy reaproveitada de {BRUTAS}')
+    else:
+        brutas = ler_com_spacy(entradas)
+    # quantas vezes cada palavra aparece com minúscula e com maiúscula (para pôr de parte nomes comuns: Estado, Câmara…)
+    minus, maius = collections.Counter(), collections.Counter()
+    for e in entradas:
+        for p in re.findall(r'\w+', texto_limpo(e['corpo'])):
+            (maius if p[0].isupper() else minus)[p.lower()] += 1
     cand = collections.defaultdict(lambda: {'n': 0, 'entradas': {}, 'formas': collections.Counter(), 'rotulo': collections.Counter()})
-    textos = [(e['id'], re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', ' ', e['corpo'] or '')))) for e in entradas]
-    for n, (doc, (eid, _)) in enumerate(zip(nlp.pipe((t for _, t in textos), batch_size=8), textos)):
-        for ent in doc.ents:
-            if ent.label_ not in TIPO:
+    for eid, texto, rotulo, frase in brutas:
+        texto = re.sub(r'\s+', ' ', texto).strip(' .,;:()«»"“”\'')
+        palavras = texto.split()
+        if len(texto) < 4 or not texto[0].isupper() or re.search(r'\d', texto):
+            continue
+        if texto.upper() == texto:                       # siglas e apelidos em maiúsculas (citações)
+            continue
+        if re.fullmatch(r"\w{1,2}\.?|\w+\.", palavras[-1]):  # termina em abreviatura cortada (D. Fr)
+            continue
+        if rotulo == 'PER' and len(palavras) < 2:
+            continue
+        if len(palavras) == 1:
+            p = palavras[0].lower()
+            if minus[p] >= 0.15 * max(maius[p], 1):      # palavra comum escrita com maiúscula
                 continue
-            texto = re.sub(r'\s+', ' ', ent.text).strip(' .,;:()«»"“”\'')
-            if len(texto) < 4 or not texto[0].isupper() or re.search(r'\d', texto):
-                continue
-            if ent.label_ == 'PER' and len(texto.split()) < 2:
-                continue
-            k = chave(texto)
-            if k in conhecidos:
-                continue
-            c = cand[k]
-            c['n'] += 1
-            c['formas'][texto] += 1
-            c['rotulo'][ent.label_] += 1
-            if eid not in c['entradas']:
-                c['entradas'][eid] = ent.sent.text.strip()[:600]
-        if n % 100 == 0:
-            print(f'{n}/{len(textos)} entradas', flush=True)
+        k = chave(texto)
+        if not k or k in conhecidos:
+            continue
+        c = cand[k]
+        c['n'] += 1
+        c['formas'][texto] += 1
+        c['rotulo'][rotulo] += 1
+        c['entradas'].setdefault(eid, frase)
     res = []
     for c in cand.values():
         if len(c['entradas']) < MIN_ENTRADAS:
             continue
-        res.append({'termo': c['formas'].most_common(1)[0][0], 'tipo': TIPO[c['rotulo'].most_common(1)[0][0]],
+        # preferir a forma por extenso mais usada (São Pedro em vez de S. Pedro)
+        formas = sorted(c['formas'].items(), key=lambda f: (-('.' not in f[0]), -f[1]))
+        res.append({'termo': formas[0][0], 'tipo': TIPO[c['rotulo'].most_common(1)[0][0]],
                     'ocorrencias': c['n'], 'entradas': c['entradas']})
     res.sort(key=lambda x: -len(x['entradas']))
     os.makedirs(os.path.dirname(SAIDA), exist_ok=True)
@@ -91,7 +151,7 @@ def extrair():
     por_tipo = collections.Counter(r['tipo'] for r in res)
     print(f'{len(res)} candidatos ({dict(por_tipo)}); {sum(len(r["entradas"]) for r in res)} ligações; gravado em {SAIDA}')
     for tipo in ('pessoa', 'lugar', 'instituicao'):
-        amostra = [f'{r["termo"]} ({len(r["entradas"])})' for r in res if r['tipo'] == tipo][:15]
+        amostra = [f'{r["termo"]} ({len(r["entradas"])})' for r in res if r['tipo'] == tipo][:25]
         print(tipo, ':', ', '.join(amostra))
 
 
