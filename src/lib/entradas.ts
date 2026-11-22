@@ -21,7 +21,8 @@ export function conteudo(e: Entrada, l: Lingua) {
   return {
     titulo: t?.titulo || e.titulo,
     corpo: t?.corpo || e.corpo,
-    resumo: t?.resumo || e.resumo || '',
+    // Nas traduções, só o resumo traduzido (nunca o português numa página inglesa ou espanhola).
+    resumo: t ? t.resumo || '' : e.resumo || '',
     traducao: t,
   };
 }

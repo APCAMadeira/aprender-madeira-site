@@ -95,6 +95,7 @@ const linguaWikipedia = (l?: string) => t.linguas[l ?? 'pt'] ?? l ?? '';
       {lingua === 'pt' && outrasLinguas.length > 0 && (
         <p class="aviso">{t.tambemEm}: {outrasLinguas.map((l, i) => <>{i > 0 && ' · '}<a href={alternativas[l]} lang={l}>{nomeLingua[l]}</a></>)}</p>
       )}
+      {c.resumo && <p class="resumo-entrada">{c.resumo}</p>}
       <div class="corpo" set:html={corpo} />
 
       {e.relacionadas.length > 0 && (
